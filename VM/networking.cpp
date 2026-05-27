@@ -11,6 +11,7 @@ namespace PiELo {
     static const int MAXBUFLEN = 512;
     int socketfd;
     addrinfo *routerinfo;
+    bool offline = false;
 
     // bind a UDP socket to an ephemeral port (0) so it can receive data
     int bindEphemeralPort(int sockfd)
@@ -29,6 +30,14 @@ namespace PiELo {
     }
 
     int initNetworking(void) {
+
+        // Offline mode: skip the router handshake entirely and run standalone.
+        if (std::getenv("PIELO_OFFLINE") != nullptr) {
+            offline = true;
+            robotID = 0;
+            std::cout << "Offline mode: no router, robotID = 0" << std::endl;
+            return 0;
+        }
 
         // 1) Resolve router address
         addrinfo hints;
@@ -122,6 +131,7 @@ namespace PiELo {
     // Broadcast a variable data
     timestamp_t broadcastVariable(std::string name, Variable v) {
         timestamp_t currentTime;
+        if (offline) return currentTime; // no router to broadcast to
         VariableData data;
         if (v.isStigmergy) {
             std::cout << " broadcasting stigmergy for " << name << " with int value " << v.stigmergyData[robotID].asInt;
@@ -159,6 +169,7 @@ namespace PiELo {
 
     // Check for a message and update a variable or rebroadcast own value if necessary
     void checkForMessage(void) {
+        if (offline) return; // no router, so nothing ever arrives
         // wait to receive something from the router (blocking!!)
         Message msg;
         sockaddr_in fromAddr;

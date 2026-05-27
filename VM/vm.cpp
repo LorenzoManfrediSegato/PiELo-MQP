@@ -54,7 +54,13 @@ namespace PiELo {
         robot.updatePos();
         // std::cout << "At pc " << programCounter << std::endl;
         handleInstruction(bytecode[programCounter]);
-        checkForMessage();
+        // Only poll the network at top level (not mid-evaluation). Processing a
+        // message can trigger handleDependants, which jumps the PC into a reactive
+        // closure; polling again before that closure returns would re-enter the
+        // recompute and corrupt the operand stack (ret_from_closure leaves a closure
+        // value behind, which then collides with the in-progress evaluation -- e.g.
+        // `gt` receiving a CLOSURE). returnAddrStack is empty exactly at top level.
+        if (returnAddrStack.empty()) checkForMessage();
         programCounter++;
 
         if (programCounter >= bytecode.size() || state == DONE) return VMState::DONE;

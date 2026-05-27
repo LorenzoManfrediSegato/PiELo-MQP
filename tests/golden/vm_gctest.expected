@@ -1,0 +1,11 @@
+Offline mode: no router, robotID = 0
+ calling add_helper
+int 4int 3 adding! result:
+Stack top: 7
+GC: Starting Collection. closureList size = 4
+GC  Collection complete. closureList size = 4
+GC: Starting Collection. closureList size = 4
+GC  Collection complete. closureList size = 4
+Stack top:  cached value: closure index: 3 cached value: int 7
+Ran end.
+Done!

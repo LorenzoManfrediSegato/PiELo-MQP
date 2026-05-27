@@ -84,6 +84,13 @@ int main()
     pid_t child_pid = fork();
     bool goSignalSent = false;
 
+    // Test-only deterministic start: if PIELO_GO_AFTER=N is set, the router
+    // broadcasts the go signal the instant the Nth client registers -- no stdin,
+    // no waiting on the forked child. Unset (== 0) preserves the original
+    // press-Enter-to-go behavior exactly.
+    int goAfter = 0;
+    if (const char *env = std::getenv("PIELO_GO_AFTER")) goAfter = std::atoi(env);
+
     if (child_pid == -1) {
         perror("fork");
         exit(-1);
@@ -116,7 +123,10 @@ int main()
                         perror("waitpid");
                         exit(-1); // Something actually went wrong
                     }
-                } else {
+                } else if (goAfter == 0) {
+                    // stdin-driven go: the child read input/EOF and exited. Skipped
+                    // in PIELO_GO_AFTER mode, where go is purely registration-counted
+                    // (otherwise an EOF on a detached stdin fires go prematurely).
                     std::cout << "Sending go signal!" << std::endl;
                     goSignalSent = true;
                     // The child just died and the go signal should be sent
@@ -191,6 +201,19 @@ int main()
                     if (sentBytes == -1)
                     {
                         perror("router: sendto");
+                    }
+                }
+
+                // Deterministic start (test-only): once N clients have registered,
+                // broadcast the go signal to all of them at once.
+                if (goAfter > 0 && !goSignalSent && currentID >= goAfter) {
+                    std::cout << "PIELO_GO_AFTER=" << goAfter
+                              << " reached; sending go signal!" << std::endl;
+                    goSignalSent = true;
+                    for (auto &client : clients) {
+                        ssize_t sent = sendto(sockfd, "", 0, 0,
+                                              (struct sockaddr *)&client.addr, client.addrLen);
+                        if (sent == -1) perror("router: sendto");
                     }
                 }
                 if (numBytes == 0) continue; // This is the init ping

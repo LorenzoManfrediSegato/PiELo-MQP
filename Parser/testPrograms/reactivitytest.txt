@@ -1,0 +1,8 @@
+(begin
+    (var global reactive a)
+    (set a 1)
+    (fun reactive f (x) (print (+ x a)))
+    (f 10)
+    (set a 2)
+    (set a 3)
+)

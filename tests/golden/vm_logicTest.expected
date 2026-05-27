@@ -1,0 +1,15 @@
+Offline mode: no router, robotID = 0
+ 1 && 0
+Stack top: 0
+ 1 && 1
+Stack top: 1
+ 2. && 0
+Stack top: 0
+ 1 || 0
+Stack top: 1
+ !30.0
+Stack top: 0
+ !0
+Stack top: 1
+Ran end.
+Done!

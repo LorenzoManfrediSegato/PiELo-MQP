@@ -40,5 +40,12 @@ assembly.txt
 *.app
 VM/VM
 VM/router
+Parser/parser
+build/
+*.dSYM/
 *.DS_Store
 tmp_*
+
+# Claude-authored planning files (kept on disk, not committed)
+CLAUDE.md
+docs/

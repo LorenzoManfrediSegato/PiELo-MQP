@@ -1,6 +1,10 @@
 INSDIR = instructions
 BUILDDIR = build
 
+CXX = g++
+# -MMD -MP emit .d header-dependency files so edits to a header trigger rebuilds.
+CXXFLAGS = -std=c++17 -Wall -Wextra -g -MMD -MP
+
 EXECUTABLE = VM
 # SOURCES = $(wildcard *.cpp,$(INSDIR)/*.cpp)
 INSOBJECTS = $(patsubst %.o, $(BUILDDIR)/$(INSDIR)/%.o, arithmetic.o closureInstructions.o comparisonJumps.o simpleInstructions.o storeLoad.o stigmergy.o)
@@ -29,17 +33,20 @@ dir:
 
 # $^ means "all of the prereqs" and $@ means "name of the target"
 $(EXECUTABLE): $(OBJECTS) $(BUILDDIR)/main.o
-	g++ $^ -o $@
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
 # see https://www.gnu.org/software/make/manual/html_node/Static-Usage.html for details
 $(OBJECTS): $(BUILDDIR)/%.o : %.cpp %.h vm.h
-	g++ -c $< -o $@ $(DEFINES)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ $(DEFINES)
 
 $(BUILDDIR)/main.o: main.cpp robotFunctions.cpp robotFunctions.h
-	g++ -c main.cpp -o $(BUILDDIR)/main.o
+	$(CXX) $(CXXFLAGS) -c main.cpp -o $(BUILDDIR)/main.o
 
 router: router.cpp vm.h networking.h
-	g++ router.cpp -o router
+	$(CXX) $(CXXFLAGS) router.cpp -o router
 
 clean:
-	rm $(BUILDDIR)/*.o $(BUILDDIR)/$(INSDIR)/*.o
+	rm -f $(BUILDDIR)/*.o $(BUILDDIR)/*.d $(BUILDDIR)/$(INSDIR)/*.o $(BUILDDIR)/$(INSDIR)/*.d
+
+# Pull in auto-generated header dependencies (ignored if absent).
+-include $(OBJECTS:.o=.d) $(BUILDDIR)/main.d
