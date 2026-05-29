@@ -220,7 +220,8 @@ namespace PiELo {
                     if (value.scope == "local") {
                         throw std::runtime_error("Error: Reactive variable '" + key + "' cannot be defined in the local scope.");
                     } else {
-                        variables.push_back(e.symbolValue);
+                        // Record the bare name (env and the VM key on it, not on "name'").
+                        variables.push_back(key);
                     }
                 } else {
                     throw std::runtime_error("Error: Variable '" + key + "' is not defined.");
@@ -620,10 +621,16 @@ namespace PiELo {
             case Expression::FLOAT:
             *file << "push f " << std::to_string(expression.floatValue) << std::endl;
             break;
-            case Expression::SYMBOL:
-            // Assuming this is not a procedure call as that would be in codegenProcedure
-            *file << "load " << expression.symbolValue << std::endl;
+            case Expression::SYMBOL: {
+            // Assuming this is not a procedure call as that would be in codegenProcedure.
+            // A trailing apostrophe (e.g. a') marks a reactive reference; the dependency is
+            // recorded separately by findVariables. The emitted load must use the bare name,
+            // since the VM resolves it against tables keyed by the undecorated variable name.
+            std::string name = expression.symbolValue;
+            if (!name.empty() && name.back() == '\'') name.pop_back();
+            *file << "load " << name << std::endl;
             break;
+            }
             default:
             std::cout << "nil!" << std::endl;
             break;

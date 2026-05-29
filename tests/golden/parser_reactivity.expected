@@ -5,7 +5,13 @@ int 10Stack top: 11
 GC: Starting Collection. closureList size = 6
 GC  Collection complete. closureList size = 6
 GC: Starting Collection. closureList size = 7
+GC  Collection complete. closureList size = 7
+Stack top: 12
+GC: Starting Collection. closureList size = 7
 GC  Collection complete. closureList size = 6
+GC: Starting Collection. closureList size = 7
+GC  Collection complete. closureList size = 7
+Stack top: 13
 GC: Starting Collection. closureList size = 7
 GC  Collection complete. closureList size = 6
 Ran end.
