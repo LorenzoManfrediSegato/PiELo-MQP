@@ -103,6 +103,30 @@ scenario_barrier() {
   return 1
 }
 
+# Cross-robot reactivity. Reader registers FIRST (PIELO_GO_AFTER=1 fires go on its
+# registration), creates tagged x=0 and registers a reactive closure over it, then
+# spins. Writer late-joins and broadcasts x=1 with a strictly-later timestamp; the
+# reader's receive path (networking.cpp handleDependants) re-runs the closure, which
+# prints "Reacted!". The closure prints ONLY when x!=0, so a stale echo of the reader's
+# own x=0 cannot false-pass -- the marker means the network update actually drove a
+# reactive rerun. (Single writer -> no contention; the local analog of this rerun is
+# the offline parser_reactivity golden.)
+scenario_reactivity() {
+  local r="$LOGDIR/react_router.log" rd="$LOGDIR/react_reader.log" wr="$LOGDIR/react_writer.log"
+  start_router 1 "$r"; sleep 0.5
+  run_vm VM/testPrograms/reactive_reader.txt "$rd"
+  sleep 1.5                                   # reader registers, creates x=0, registers watch, polls
+  run_vm VM/testPrograms/reactive_writer.txt "$wr"
+  sleep 3                                      # convergence margin
+  reap
+  if assert_all_contain "Reacted!" "$rd"; then
+    echo "  ok    reactivity: reader's reactive closure re-ran on peer broadcast"
+    return 0
+  fi
+  echo "  FAIL  reactivity: reader never printed 'Reacted!' (closure did not re-run on receive)"
+  return 1
+}
+
 # Retry wrapper: run a scenario up to 1+RETRIES times; pass on first success.
 run_scenario() {
   local fn="$1" name="$2" attempt=1
@@ -116,7 +140,7 @@ run_scenario() {
 
 # ----------------------------------------------------------------------------
 
-ALL=(propagation:scenario_propagation barrier:scenario_barrier)
+ALL=(propagation:scenario_propagation barrier:scenario_barrier reactivity:scenario_reactivity)
 
 filter="${1:-}"
 pass=0; fail=0; failed=""

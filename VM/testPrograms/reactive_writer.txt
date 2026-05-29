@@ -1,0 +1,10 @@
+# Cross-robot reactive WRITER (Phase 1.5 multi-robot suite).
+#
+# Late-joins (after the reader has registered and started polling) and broadcasts
+# x=1 with a strictly-later timestamp than the reader's initial x=0, so the reader
+# accepts the update cleanly and its reactive closure re-runs. Single writer -> no
+# contention, which avoids the tagged-var oscillation documented in ROADMAP Phase 1.5.
+push i 1
+store tagged x
+tag variable x global
+end

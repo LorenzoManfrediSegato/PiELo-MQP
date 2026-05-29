@@ -1,0 +1,29 @@
+# Cross-robot reactive READER (Phase 1.5 multi-robot suite).
+#
+# A reactive closure over a TAGGED variable owned by a peer. Mirrors the propagation
+# reader's networking setup -- create x locally first so an incoming update lands on
+# the handleDependants path (networking.cpp requires taggedTable.at(x) to succeed) --
+# but consumes the update via a reactive closure instead of a manual poll loop.
+#
+# `call_closure` registers `watch` as a dependant of x and runs it once (x==0 -> no
+# react). On the writer's broadcast, checkForMessage updates x and fires
+# handleDependants(x), re-running `watch` with the new value, which prints "Reacted!".
+# This exercises the exact dependency-registration + reactive-rerun path fixed for the
+# local reactive `set` case, now driven by a network receive. spin keeps the VM polling
+# (and keeps watch's closure index on the operand stack as a GC root).
+push i 0
+store tagged x
+tag variable x global
+push i 0
+load watch
+call_closure
+spin
+
+define_closure watch 0 1 x
+load x
+jmp_if_zero notyet
+debug_print Reacted!
+end
+label notyet
+push i 0
+ret_from_closure
