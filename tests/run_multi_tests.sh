@@ -58,6 +58,17 @@ assert_all_contain() {
   [ "$ok" = 1 ]
 }
 
+# Build VM + router from source so the suite never runs a stale binary (the
+# networked analog of the Phase 0 stale-assembly.txt phantom-test bug). Tracing off
+# (DEBUG_INSTRUCTIONS=0) for smaller logs; the markers are `debug_print`/raw cout, not
+# gated by the trace flag, so grepping still works. A clean build is required because
+# Make does not rebuild objects just because the -D define changed.
+build() {
+  echo "Building VM + router (tracing off)..."
+  make -C "$ROOT/VM" clean >/dev/null 2>&1
+  make -C "$ROOT/VM" DEBUG_INSTRUCTIONS=0 >/dev/null 2>&1 || { echo "VM build FAILED"; exit 2; }
+}
+
 # ----------------------------------------------------------------------------
 # Scenarios. Each prints its own pass/fail detail and returns 0 (pass) / 1 (fail).
 # ----------------------------------------------------------------------------
@@ -127,6 +138,34 @@ scenario_reactivity() {
   return 1
 }
 
+# Last-writer-wins. Reader registers FIRST (PIELO_GO_AFTER=1 fires go on its
+# registration), creates tagged var=0, and watches it. Two writers late-join in strict
+# order, ~1.5s apart: A writes var=1, then B writes var=2 with a later timestamp. The
+# reader must FIRST observe A's value ("Saw A=1") and THEN converge to B's later value
+# ("Converged to B=2") -- exactly the networking.cpp timestamp compare keeping the newer
+# write. Requiring BOTH markers is what distinguishes this from plain propagation: it
+# proves B's write superseded an already-established A, not merely that 2 arrived. A
+# strictly-ordered pair, so no oscillation (ROADMAP Phase 1.5 "Finding"); the simultaneous
+# case is a known bug, deliberately out of scope until the logical-clock work.
+scenario_lww() {
+  local r="$LOGDIR/lww_router.log" rd="$LOGDIR/lww_reader.log"
+  local a="$LOGDIR/lww_writer_a.log" b="$LOGDIR/lww_writer_b.log"
+  start_router 1 "$r"; sleep 0.5
+  run_vm VM/testPrograms/lww_reader.txt "$rd"
+  sleep 1.5                                   # reader registers, creates var=0, begins polling
+  run_vm VM/testPrograms/lww_writer_a.txt "$a"
+  sleep 1.5                                   # A's var=1 propagates and is observed before B writes
+  run_vm VM/testPrograms/lww_writer_b.txt "$b"
+  sleep 3                                      # convergence margin
+  reap
+  if assert_all_contain "Saw A=1" "$rd" && assert_all_contain "Converged to B=2" "$rd"; then
+    echo "  ok    lww: reader saw A=1 then converged to B=2 (later write won)"
+    return 0
+  fi
+  echo "  FAIL  lww: reader did not see A then converge to B ('Saw A=1' / 'Converged to B=2' missing)"
+  return 1
+}
+
 # Retry wrapper: run a scenario up to 1+RETRIES times; pass on first success.
 run_scenario() {
   local fn="$1" name="$2" attempt=1
@@ -140,7 +179,9 @@ run_scenario() {
 
 # ----------------------------------------------------------------------------
 
-ALL=(propagation:scenario_propagation barrier:scenario_barrier reactivity:scenario_reactivity)
+ALL=(propagation:scenario_propagation barrier:scenario_barrier reactivity:scenario_reactivity lww:scenario_lww)
+
+build
 
 filter="${1:-}"
 pass=0; fail=0; failed=""

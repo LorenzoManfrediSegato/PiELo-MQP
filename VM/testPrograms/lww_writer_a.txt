@@ -1,0 +1,9 @@
+# Last-writer-wins WRITER A (Phase 1.5 multi-robot suite).
+#
+# Launched FIRST. Writes the tagged `var=1`, broadcasts it, then ends. Its write
+# carries an earlier wall-clock timestamp than writer B's, so under last-writer-wins
+# (networking.cpp checkForMessage timestamp compare) B's later write supersedes it.
+push i 1
+store tagged var
+tag variable var global
+end

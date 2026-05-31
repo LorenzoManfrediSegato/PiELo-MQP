@@ -1,0 +1,11 @@
+# Last-writer-wins WRITER B (Phase 1.5 multi-robot suite).
+#
+# Launched STRICTLY AFTER writer A (the harness staggers the two). Writes the tagged
+# `var=2` with a later timestamp, so last-writer-wins resolves in its favor and the
+# reader must converge to 2 (not A's 1), then ends. A single strictly-ordered pair ->
+# no oscillation (see ROADMAP Phase 1.5 "Finding: tagged shared variables don't
+# converge under contention" -- only the simultaneous case is broken/out of scope).
+push i 2
+store tagged var
+tag variable var global
+end

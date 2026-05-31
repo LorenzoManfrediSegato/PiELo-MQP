@@ -1,0 +1,35 @@
+# Last-writer-wins READER (Phase 1.5 multi-robot suite).
+#
+# Registers first, creates the tagged `var=0`, then watches it in two phases:
+#   phase A: block until var==1 (writer A's value has arrived)   -> print "Saw A=1"
+#   phase B: block until var==2 (writer B's later value has won)  -> print "Converged to B=2"
+#
+# Asserting BOTH markers is what makes this a genuine last-writer-wins test rather than
+# a dressed-up propagation test: "Converged to B=2" alone would also pass if A's write
+# never landed (plain propagation, already covered by the propagation scenario). Pairing
+# it with "Saw A=1" proves A's value was first ESTABLISHED locally and THEN superseded by
+# B's later-timestamped write -- exactly the networking.cpp timestamp compare picking the
+# newer write. If LWW kept the older value, "Converged to B=2" would never print.
+#
+# The two writes are staggered ~1.5s apart and the reader re-polls var on every opcode
+# (step() polls the network each instruction, so this manual jump-loop polls every
+# iteration -- same mechanism as waiter.txt, no spin needed), so it is guaranteed to
+# observe the transient 1 before the 2. The reader ends once converged.
+push i 0
+store tagged var
+tag variable var global
+
+label waitA
+load var
+push i 1
+neql
+jmp_if_not_zero waitA
+debug_print Saw A=1
+
+label waitB
+load var
+push i 2
+neql
+jmp_if_not_zero waitB
+debug_print Converged to B=2
+end

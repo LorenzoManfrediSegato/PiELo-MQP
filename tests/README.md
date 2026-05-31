@@ -44,46 +44,67 @@ arriving from another robot is never exercised**:
 - Registration / go-signal handshake and the broadcast *send* path.
 
 These only happen on the network path. **A green offline run says nothing about
-them** — they must be checked with the manual multi-robot smoke tests below, and
-should be the first thing re-verified after touching `networking.cpp`,
-`storeLoad.cpp`'s broadcast calls, or `handleDependants`.
+them** — they are covered by the automated multi-robot suite below (`make
+test-multi`), which should be the first thing re-verified after touching
+`networking.cpp`, `storeLoad.cpp`'s broadcast calls, or `handleDependants`.
 
-## Manual multi-robot smoke tests
+## Multi-robot regression suite (automated)
 
-Run **without** `PIELO_OFFLINE` so the real networking path is exercised. Build
-with `make -C VM` first. Each needs the router plus one or more VM processes;
-press Enter in the router terminal to broadcast the go-signal once all robots
-have registered.
+```bash
+make test-multi                      # build + run every networked scenario (exit 1 on failure)
+bash tests/run_multi_tests.sh        # same thing
+bash tests/run_multi_tests.sh lww    # run a single scenario by name
+```
 
-### Cross-robot reactivity / tagged-variable propagation
+The networked twin of the offline suite. It runs **without** `PIELO_OFFLINE` so
+the real network path is exercised: it starts the `router` plus several `VM`
+processes over UDP and asserts **invariants** ("every robot eventually prints
+X"), not exact transcripts — process/UDP timing makes a byte-for-byte golden
+impossible. It is **opt-in**: deliberately kept out of the fast `make test`
+because it takes several seconds of real wall-clock per scenario.
 
-`waiter` spins on a tagged `var` until it becomes nonzero; `updater` sets `var=1`
-and broadcasts. Build with `DEBUG_INSTRUCTIONS=1` to see the trace.
+Determinism comes from **`PIELO_GO_AFTER=N`** (test-only, in `router.cpp`): the
+router fires the go-signal the instant the Nth client registers — no sleep
+guessing, no stdin — plus deliberate launch ordering where a scenario needs a
+writer sequenced after a reader. Residual timing slack is absorbed by generous
+convergence windows and a small retry budget. The harness builds its own VM +
+router (tracing off) each run, so it never tests a stale binary.
+
+### What it covers
+
+| Scenario | Invariant | Programs |
+|---|---|---|
+| `propagation` | a waiter spinning on a tagged var converges to a peer's broadcast → `Loop done!` | `waiter` + `updater` |
+| `barrier` | 5 robots each write their own stigmergy slot; every robot merges all 5 and counts them → `Continuing!` | `barrier` ×5 |
+| `reactivity` | a reactive closure over a **tagged** var re-runs on a peer's broadcast (the `handleDependants` call on the receive path) → `Reacted!` | `reactive_reader` + `reactive_writer` |
+| `lww` | two writers sequenced by launch order; the reader observes A's value, then **converges to B's later-timestamped write** (the timestamp compare in `checkForMessage`) → `Saw A=1` **and** `Converged to B=2` | `lww_reader` + `lww_writer_a` + `lww_writer_b` |
+
+Together these cover the four network behaviors the offline suite structurally
+cannot: tagged propagation, stigmergy merge across peers, cross-robot reactive
+recompute, and last-writer-wins conflict resolution.
+
+**Caveat — tagged-var contention is out of scope.** Each scenario sequences a
+single winning writer (or uses the merge-based, contention-immune stigmergy
+path). Two *simultaneous* writers to the same tagged var do **not** converge today
+— wall-clock LWW picks an arbitrary winner, and a rejected write is rebroadcast
+with a fresh timestamp, so contending values oscillate. This is a known bug,
+deliberately deferred to the logical-clock work (see `docs/ROADMAP.md` Phase 1.5
+"Finding" and `docs/RL_DESIGN.md`); the `lww` scenario tests only the
+strictly-ordered case, which converges cleanly.
+
+### Running a scenario by hand (debugging)
+
+The automated suite handles the go-signal for you. To drive one manually instead,
+build with tracing on (`make -C VM`, or `DEBUG_INSTRUCTIONS=1` for per-opcode
+output), start the router, launch the VMs, and press Enter in the router terminal
+to broadcast the go-signal once all robots have registered:
 
 ```bash
 ./VM/router                          # terminal 1
 ./VM/VM VM/testPrograms/waiter.txt   # terminal 2 (registers, then loops)
 ./VM/VM VM/testPrograms/updater.txt  # terminal 3
-# press Enter in terminal 1
+# press Enter in terminal 1 -> waiter receives var=1 and prints "Loop done!"
 ```
-
-**Expected:** after the go-signal, `waiter` receives `updater`'s broadcast,
-escapes its loop, and prints `Loop done!`. Offline, `waiter` loops forever — so
-this is exactly the behavior the offline suite cannot see.
-
-### Multi-robot stigmergy merge
-
-`barrier` waits until 5 robots have written the stigmergy `barrier` slot, then
-calls `go_forward`.
-
-```bash
-./VM/router                                  # terminal 1
-for i in 1 2 3 4 5; do ./VM/VM VM/testPrograms/barrier.txt & done   # 5 robots
-# press Enter in terminal 1
-```
-
-**Expected:** once all 5 slots are present, each robot prints `Continuing!` and
-goes forward. Validates that peers' stigmergy slots are merged and counted.
 
 ## Notes for adding/maintaining tests
 
