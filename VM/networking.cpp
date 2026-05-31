@@ -8,7 +8,6 @@
 #define ROUTER_HOST "localhost"
 #define ROUTER_PORT "5005"
 namespace PiELo {
-    static const int MAXBUFLEN = 512;
     int socketfd;
     addrinfo *routerinfo;
     bool offline = false;

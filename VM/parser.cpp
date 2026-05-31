@@ -197,7 +197,9 @@ void Parser::handleSimple(const Instruction opcode) {
     bytecode.push_back(opcode);
 }
 
-void Parser::handleFunctionOrLabel(const std::string& type) {
+// `type` ("func" / "label") is currently unused -- funcs and labels are handled
+// identically -- but kept at the call sites to document the distinction.
+void Parser::handleFunctionOrLabel(const std::string& /*type*/) {
     int32_t position = bytecode.size();
     std::string locName = parseNextString();
     debugPrint("Parsed label " << locName << " at pos " << position << std::endl);

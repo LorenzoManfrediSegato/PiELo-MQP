@@ -162,7 +162,7 @@ namespace PiELo {
             returnAddrStack.push((scopeData){.scopeSymbolTable = currentSymbolTable, .codePointer = programCounter, .closureIndex = currentClosureIndex});
             
             std::stack<scopeData> dependants;
-            for (int i = 0; i < var.dependants.size(); i++) {
+            for (size_t i = 0; i < var.dependants.size(); i++) {
                 // Push the info of each dependant closure and all of its dependants to the dependants stack
                 recursivelyAddDependantsOfClosureToReturnAddrStack(var.dependants[i], dependants);
             }

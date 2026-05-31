@@ -51,10 +51,10 @@ namespace PiELo{
         stack.pop();
         int numArgs = stack.top().getIntValue();
         stack.pop();
-        if (stack.size() < numArgs) throw ShortOnElementsOnStackException("call_closure arguments");
+        if (stack.size() < static_cast<size_t>(numArgs)) throw ShortOnElementsOnStackException("call_closure arguments");
         debugPrint(" Num args: " << numArgs << std::endl);
 
-        if (numArgs != closureList[closureIndex].argNames.size()) throw std::runtime_error("Mismatched number of arguments for call_closure");
+        if (static_cast<size_t>(numArgs) != closureList[closureIndex].argNames.size()) throw std::runtime_error("Mismatched number of arguments for call_closure");
 
         // Top of stack now holds the first argument
         for (int i = 0; i < numArgs; i++) {
@@ -116,10 +116,14 @@ namespace PiELo{
                     stack.top().getFloatValue(); 
                     debugPrint(" placed " << stack.top().getFloatValue() << " in cache for closure index " << currentClosureIndex << std::endl);
                     break;
-                case PIELO_CLOSURE: closureList[currentClosureIndex].cachedValue = 
-                    stack.top().getClosureIndex(); 
+                case PIELO_CLOSURE: closureList[currentClosureIndex].cachedValue =
+                    stack.top().getClosureIndex();
                     debugPrint(" placed " << stack.top().getClosureIndex() << " in cache for closure index " << currentClosureIndex << std::endl);
                     break;
+                case NIL:
+                case C_CLOSURE:
+                case NAME:
+                    break; // these types are not cached as a closure return value
             }
 
         

@@ -29,7 +29,7 @@ namespace PiELo {
     // Temporary typedef for however we store code
     typedef size_t codePtr;
 
-    struct Variable;
+    class Variable;
 
     typedef std::map<std::string, Variable> symbolTable;
 
@@ -126,20 +126,20 @@ namespace PiELo {
 
         opCodeInstructionOrArgument(Instruction instruction): type(INSTRUCTION) {asInstruction = instruction;}
 
-        opCodeInstructionOrArgument(codePtr codePointer, std::vector<std::string> dependencies, std::vector<std::string> args, std::vector<PiELo::Type> argTypes) {
+        opCodeInstructionOrArgument(codePtr codePointer, std::vector<std::string> dependencies, std::vector<std::string> args, std::vector<PiELo::Type> /*argTypes*/) {
+            // ClosureData is non-POD (holds vectors/strings/a symbol table), so it must
+            // be `new`ed, not malloc'd, or its members are never constructed (UB).
             type = PIELO_CLOSURE;
-            asClosure = (ClosureData*) malloc(sizeof(ClosureData));
+            asClosure = new ClosureData;
             asClosure->codePointer = codePointer;
             asClosure->argNames = args;
+            asClosure->dependencies = dependencies;
         }
 
         opCodeInstructionOrArgument(ClosureData closureData) {
             type = PIELO_CLOSURE;
-            printf("Typed\n");
             asClosure = new ClosureData;
-            printf("malloc'd\n");
             *asClosure = closureData;
-            printf("Done mallocing\n");
         }
 
         //opCodeInstructionOrArgument(const std::string& value_s) : type(STRING) {value.asString = new std::string(value);}
@@ -171,10 +171,11 @@ namespace PiELo {
                     case INT: asInt = other.asInt; break;
                     case STRING: asString = new std::string(*other.asString); break;
                     case NIL: break;
-                    case PIELO_CLOSURE: 
+                    case PIELO_CLOSURE:
                         asClosure = new ClosureData();
                         *asClosure = *other.asClosure;
                         break;
+                    case C_CLOSURE: break; // no C-closure payload in this union
                     case NAME: asString = new std::string(*other.asString); break;
                     case LOCATION: asLocation = new std::string(*other.asLocation); break;
                 }
@@ -191,9 +192,12 @@ namespace PiELo {
                     case INT: asInt = other.asInt; break;
                     case STRING: asString = new std::string(*other.asString); break;
                     case NIL: break;
-                    case PIELO_CLOSURE: 
+                    case PIELO_CLOSURE:
                         asClosure = new ClosureData;
                         *asClosure = *other.asClosure;
+                        break; // without this, fell through into NAME and read the
+                               // closure pointer as a std::string* -> memory corruption
+                    case C_CLOSURE: break; // no C-closure payload in this union
                     case NAME: asString = new std::string(*other.asString); break;
                     case LOCATION: asLocation = new std::string(*other.asLocation); break;
                 }

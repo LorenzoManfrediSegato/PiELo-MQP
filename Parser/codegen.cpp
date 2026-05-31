@@ -158,7 +158,7 @@ namespace PiELo {
 
         if (assemblyInstruction != "") {
             // Plus one for the procedure name itself
-            if (e.listValue.size() != expectedArguments + 1) {
+            if (e.listValue.size() != static_cast<size_t>(expectedArguments + 1)) {
                 throw std::invalid_argument("Expected " + std::to_string(expectedArguments) + " for operation '" + procedureName + 
                                             "'. Instead, got " + std::to_string(e.listValue.size() - 1) + " arguments. Expression: " + e.toString()); 
             }
@@ -251,7 +251,7 @@ namespace PiELo {
                     }
                     
                     // Add all variables other than the procedure
-                    int i = 1;
+                    size_t i = 1;
 
                     for (; i < e.listValue.size(); i++) {
                         std::vector<std::string> subVariables = findVariables(e.listValue[i]);
@@ -402,7 +402,7 @@ namespace PiELo {
         // Code blocks
         else if (e.listValue[0].symbolValue == "begin") {
             // Code block
-            for (int i = 1; i < e.listValue.size(); i++) {
+            for (size_t i = 1; i < e.listValue.size(); i++) {
                 codegen(e.listValue[i]);
                 // Discard the result of all expressions other than the last
                 if (i < e.listValue.size() - 1) *file << "pop" << std::endl;
@@ -469,7 +469,7 @@ namespace PiELo {
                 } else {
                     throw std::invalid_argument("Expected ending quote of print statement. Expression: " + e.toString());
                 }
-                for (int i = 1; i < e.listValue.size(); i++) {
+                for (size_t i = 1; i < e.listValue.size(); i++) {
                     *file << e.listValue[i].toString();
                     if (i == e.listValue.size() - 1) *file << " ";
                 }
