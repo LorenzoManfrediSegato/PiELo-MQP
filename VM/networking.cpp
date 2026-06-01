@@ -4,6 +4,7 @@
 #include "vm.h"
 #include "instructions/storeLoad.h"
 #include "gc.h"
+#include "debug.h"
 
 #define ROUTER_HOST "localhost"
 #define ROUTER_PORT "5005"
@@ -80,11 +81,11 @@ namespace PiELo {
         {
             char ipStr[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &localAddr.sin_addr, ipStr, sizeof(ipStr));
-            std::printf("Client bound to %s:%d\n", ipStr, ntohs(localAddr.sin_port));
+            debugPrint("Client bound to " << ipStr << ":" << ntohs(localAddr.sin_port) << std::endl);
         }
 
         socketfd = sockfd;
-        std::cout << "Pinging router for ID" << std::endl;
+        debugPrint("Pinging router for ID" << std::endl);
         sendto(socketfd, "", 0, 0, routerinfo->ai_addr, routerinfo->ai_addrlen);
         sockaddr_in fromAddr;
         socklen_t fromLen = sizeof(fromAddr);
@@ -96,10 +97,10 @@ namespace PiELo {
             perror("client: recvfrom");
             exit(-1);
         }
-        std::cout << "My ID is " << robotID << std::endl;
+        debugPrint("My ID is " << robotID << std::endl);
 
 
-        std::cout << "Waiting for start signal." << std::endl;
+        debugPrint("Waiting for start signal." << std::endl);
         numBytes = recvfrom(socketfd, &robotID, sizeof(robotID), 0,
                                         (sockaddr *)&fromAddr,
                                         &fromLen);
@@ -108,7 +109,7 @@ namespace PiELo {
             perror("client: recvfrom");
             exit(-1);
         }
-        std::cout << "Going!" << std::endl;
+        debugPrint("Going!" << std::endl);
 
         // Pause for 10 microseconds when checking for messages
         // Thanks to https://stackoverflow.com/questions/15941005/making-recvfrom-function-non-blocking
@@ -133,16 +134,16 @@ namespace PiELo {
         if (offline) return currentTime; // no router to broadcast to
         VariableData data;
         if (v.isStigmergy) {
-            std::cout << " broadcasting stigmergy for " << name << " with int value " << v.stigmergyData[robotID].asInt;
+            debugPrint(" broadcasting stigmergy for " << name << " with int value " << v.stigmergyData[robotID].asInt);
             data = v.stigmergyData[robotID];
         }
         else data = v.getVariableData();
 
         // Get the cached value if it's a closure that updated
         if (v.getType() == Type::PIELO_CLOSURE) {
-            std::cout << "Getting closure cached value" << " for closure " << name << " index " << v.getClosureIndex() << std::endl;
+            debugPrint("Getting closure cached value" << " for closure " << name << " index " << v.getClosureIndex() << std::endl);
             data = closureList[v.getClosureIndex()].cachedValue;
-            std::cout << "got" << std::endl;
+            debugPrint("got" << std::endl);
         }
 
         Message msg;
@@ -157,12 +158,15 @@ namespace PiELo {
 
         char ipStr[INET_ADDRSTRLEN];
         inet_ntop(routerinfo->ai_family, &routerinfo->ai_addr, ipStr, sizeof(ipStr));
-        in_port_t port;
+        // port / sentBytes feed only the debug trace below, which compiles to
+        // nothing when __DEBUG_INSTRUCTIONS__ is off (the tracing-off build the
+        // test harness uses). [[maybe_unused]] keeps that build warning-clean.
+        [[maybe_unused]] in_port_t port;
         if (routerinfo->ai_family == AF_INET) port = ((sockaddr_in*) routerinfo->ai_addr)->sin_port;
         else port = ((sockaddr_in6*) routerinfo->ai_addr)->sin6_port;
 
-        ssize_t sentBytes = sendto(socketfd, (void*) &msg, sizeof(msg), 0, routerinfo->ai_addr, routerinfo->ai_addrlen);
-        std::cout << "Sent " << sentBytes << " bytes update for variable " << name << " to router at " << ipStr <<":"<< port << " family" << routerinfo->ai_family << std::endl;
+        [[maybe_unused]] ssize_t sentBytes = sendto(socketfd, (void*) &msg, sizeof(msg), 0, routerinfo->ai_addr, routerinfo->ai_addrlen);
+        debugPrint("Sent " << sentBytes << " bytes update for variable " << name << " to router at " << ipStr <<":"<< port << " family" << routerinfo->ai_family << std::endl);
         return currentTime;
     }
 
@@ -190,7 +194,7 @@ namespace PiELo {
         // print out message
         char senderIp[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &fromAddr.sin_addr, senderIp, sizeof(senderIp));
-        std::cout << "Received update to variable " << msg.variableName << " from " << senderIp << ":" << ntohs(fromAddr.sin_port);
+        debugPrint("Received update to variable " << msg.variableName << " from " << senderIp << ":" << ntohs(fromAddr.sin_port));
         // if (std::string(msg.variableName) == "wait") {
             // std::cout << " value " << msg.data.asClosureIndex;
         // }
@@ -206,14 +210,14 @@ namespace PiELo {
                         var->mutateValue(msg.data);
                     }
                     var->lastUpdated = msg.variableLastUpdated;
-                    std::cout << ". Local version was out of date. Updated." << std::endl;
+                    debugPrint(". Local version was out of date. Updated." << std::endl);
                 } else {
-                    std::cout << ". Local version is newer. Brooadcasting update." << std::endl;
+                    debugPrint(". Local version is newer. Brooadcasting update." << std::endl);
                     broadcastVariable(msg.variableName, var->getVariableData());
                 }
             } else {
                 var->updateStigValue(msg.robotID, msg.data);
-                std::cout << ". Updated stigmergy for ID " << msg.robotID << " int value " << msg.data.asInt << std::endl;
+                debugPrint(". Updated stigmergy for ID " << msg.robotID << " int value " << msg.data.asInt << std::endl);
             }
             handleDependants(*var);
         } catch(...) {
@@ -228,7 +232,7 @@ namespace PiELo {
                 taggedTable[msg.variableName].isStigmergy = false;
                 taggedTable[msg.variableName].lastUpdated = msg.variableLastUpdated;
             }
-            std::cout << ". Local version did not exist." << std::endl;
+            debugPrint(". Local version did not exist." << std::endl);
         }
     }
 }

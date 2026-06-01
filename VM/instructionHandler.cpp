@@ -8,11 +8,7 @@
 #include "instructions/stigmergy.h"
 #include "gc.h"
 #include "vm.h"
-#ifdef __DEBUG_INSTRUCTIONS__
-#define debugPrint(e) std::cout << e;
-#else
-#define debugPrint(e)
-#endif
+#include "debug.h"
 
 namespace PiELo{
     void handleInstruction(opCodeInstructionOrArgument op) {

@@ -5,11 +5,7 @@
 #include <numeric>
 
 using namespace PiELo;
-#ifdef __DEBUG_PARSER__
-#define debugPrint(e) std::cout << e;
-#else
-#define debugPrint(e)
-#endif
+#include "debug.h"
 
 void Parser::initHandlers() {
      instructionHandlers = {
@@ -25,7 +21,7 @@ void Parser::initHandlers() {
         {"mul", [&]() { handleArithmetic(MUL); }},
         {"div", [&]() { handleArithmetic(DIV); }},
         {"mod", [&]() { handleSimple(MOD); }},
-        {"print", [&]() {debugPrint("Parsing: print" << std::endl); handleSimple(PRINT); }},
+        {"print", [&]() {debugPrintParser("Parsing: print" << std::endl); handleSimple(PRINT); }},
         {"eql", [&]() { handleSimple(EQL); }},
         {"neql", [&]() { handleSimple(NEQL); }},
         {"gt", [&]() { handleSimple(GT); }},
@@ -40,9 +36,9 @@ void Parser::initHandlers() {
         {"jmp_if_not_zero", [&]() { handleJump(JMP_IF_NOT_ZERO); }},
         {"func", [&]() { handleFunctionOrLabel("func"); }},
         {"label", [&]() { handleFunctionOrLabel("label"); }},
-        {"end", [&]() {debugPrint("Parsing: end" << std::endl); handleSimple(END); }},
-        {"define_closure", [&]() {debugPrint("Parsing: define_closure" << std::endl); handleDefineClosure(); }},
-        {"call_closure", [&]() {debugPrint("parsing: call_closure" << std::endl); handleSimple(CALL_CLOSURE);}},
+        {"end", [&]() {debugPrintParser("Parsing: end" << std::endl); handleSimple(END); }},
+        {"define_closure", [&]() {debugPrintParser("Parsing: define_closure" << std::endl); handleDefineClosure(); }},
+        {"call_closure", [&]() {debugPrintParser("parsing: call_closure" << std::endl); handleSimple(CALL_CLOSURE);}},
         {"ret_from_closure", [&]() {handleSimple(RET_FROM_CLOSURE);}},
         {"call_c_closure", [&]() {Parser::handleCallC();}},
         {"uncache", [&]() {handleSimple(UNCACHE);}},
@@ -55,7 +51,7 @@ void Parser::initHandlers() {
         {"stig_size", [&]() {Parser::handleStigSize();}},
         {"#", [&]() { file.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); }},
         {"debug_print", [&]() {handleDebugPrint();}},
-        {"spin", [&]() { handleSimple(SPIN); debugPrint("bytecode size after spin is " << bytecode.size() << std::endl);}}
+        {"spin", [&]() { handleSimple(SPIN); debugPrintParser("bytecode size after spin is " << bytecode.size() << std::endl);}}
     };
 }
 
@@ -87,7 +83,7 @@ void Parser::load(std::string filename){
             auto it = labelledLocations.find(*ins.asLocation);
             if (it != labelledLocations.end()) {
                 bytecode[i] = (int) it->second;
-                debugPrint("Swapped location " << *ins.asLocation << " for bytecode position " << it->second << std::endl);
+                debugPrintParser("Swapped location " << *ins.asLocation << " for bytecode position " << it->second << std::endl);
             } else {
                 throw std::runtime_error("Could not find labelled location " + *ins.asLocation);
             }
@@ -112,7 +108,7 @@ void Parser::handlePush() {
     if (type == "i") {
         bytecode.push_back(PUSHI);
         bytecode.push_back(parseNextInt());
-        debugPrint("parsed: push int " << bytecode.at(bytecode.size() - 1).asInt << std::endl);
+        debugPrintParser("parsed: push int " << bytecode.at(bytecode.size() - 1).asInt << std::endl);
     }
     else if (type == "f") {
         bytecode.push_back(PUSHF);
@@ -141,7 +137,7 @@ void Parser::handleStore() {
     } else if (type == "tagged") {
         bytecode.push_back(STORE_TAGGED);
         std::string name = parseNextString();
-        debugPrint(" parsed: store tag name " << name << std::endl);
+        debugPrintParser(" parsed: store tag name " << name << std::endl);
         bytecode.push_back(name);  // var name
     } else if (type == "stig") {
         bytecode.push_back(STORE_STIG);
@@ -161,7 +157,7 @@ void Parser::handleTag() {
         bytecode.push_back(TAG_VARIABLE);
         std::string name = parseNextString();
         std::string tag = parseNextString();
-        debugPrint("Parsed tag variable " << name << " with tag " << tag << std::endl);
+        debugPrintParser("Parsed tag variable " << name << " with tag " << tag << std::endl);
         bytecode.push_back(name);  // variable name
         bytecode.push_back(tag);  // tag name
     } else if (type == "robot") {
@@ -173,16 +169,16 @@ void Parser::handleTag() {
 }
 
 void Parser::handleLoad() {
-    debugPrint("parser: Handling load" << std::endl);
+    debugPrintParser("parser: Handling load" << std::endl);
     bytecode.push_back(LOAD_TO_STACK);
-    // debugPrint(("1\n");
+    // debugPrintParser(("1\n");
     // opCodeInstructionOrArgument name = parseNextString();
     // opCodeInstructionOrArgument name2 = name;
-    // debugPrint("name str: " << name.asString << " name2 str: " << name2.asString << std::endl;
+    // debugPrintParser("name str: " << name.asString << " name2 str: " << name2.asString << std::endl;
     bytecode.push_back(parseNextString());  // variable name
-    debugPrint(" Pushed type " << bytecode[bytecode.size() - 1].type << std::endl);
-    debugPrint(" value " << *bytecode[bytecode.size()-1].asString << std::endl);
-    // debugPrint(("2\n");
+    debugPrintParser(" Pushed type " << bytecode[bytecode.size() - 1].type << std::endl);
+    debugPrintParser(" value " << *bytecode[bytecode.size()-1].asString << std::endl);
+    // debugPrintParser(("2\n");
 }
 
 void Parser::handlePop() {
@@ -202,7 +198,7 @@ void Parser::handleSimple(const Instruction opcode) {
 void Parser::handleFunctionOrLabel(const std::string& /*type*/) {
     int32_t position = bytecode.size();
     std::string locName = parseNextString();
-    debugPrint("Parsed label " << locName << " at pos " << position << std::endl);
+    debugPrintParser("Parsed label " << locName << " at pos " << position << std::endl);
     labelledLocations[locName] = position;
 }
 
@@ -234,26 +230,26 @@ void Parser::handleDefineClosure() {
 
 
     int numArgs = parseNextInt();
-    debugPrint("Defineclosure: num args: " << numArgs << std::endl);
+    debugPrintParser("Defineclosure: num args: " << numArgs << std::endl);
     
     for (int i = 0; i < numArgs; i++) {
         closure.argNames.push_back(parseNextString());
     }
 
-    debugPrint("Done with args. " << std::endl);
+    debugPrintParser("Done with args. " << std::endl);
     int numDependencies = parseNextInt();
-    debugPrint("num deps: " << numDependencies << std::endl);
+    debugPrintParser("num deps: " << numDependencies << std::endl);
     for (int i = 0; i < numDependencies; i++) {
-        debugPrint("Parsing dep." << std::endl);
+        debugPrintParser("Parsing dep." << std::endl);
         closure.dependencies.push_back(parseNextString());
     }
-    debugPrint("Done with deps " << std::endl);
+    debugPrintParser("Done with deps " << std::endl);
 
     closure.codePointer = bytecode.size() - 1;
 
     // bytecode.push_back(closure);
     defineClosure(name, closure);
-    debugPrint("Done with defineClosure" << std::endl);
+    debugPrintParser("Done with defineClosure" << std::endl);
 }
 
 void Parser::handleCallC() {
@@ -281,7 +277,7 @@ float Parser::parseNextFloat() {
 std::string Parser::parseNextString() {
     std::string value;
     file >> value;
-    // debugPrint("parsed next string " << value << " addr: " << &value <<  std::endl);
+    // debugPrintParser("parsed next string " << value << " addr: " << &value <<  std::endl);
     return value;
 }
 

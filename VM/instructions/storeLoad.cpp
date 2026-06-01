@@ -4,11 +4,7 @@
 #include "../networking.h"
 #include <sys/time.h>
 #include "../gc.h"
-#ifdef __DEBUG_INSTRUCTIONS__
-#define debugPrint(e) std::cout << e;
-#else
-#define debugPrint(e)
-#endif
+#include "../debug.h"
 
 namespace PiELo {
  void storeLocal(std::string varName){
