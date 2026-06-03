@@ -6,8 +6,13 @@
 #include <unordered_map>
 #include <functional>
 
+// Loads the text ASSEMBLY the VM executes (instruction <args> per line) into the
+// bytecode vector. NOTE: unrelated to Parser/parser.{cpp,h}, which compiles the
+// Lisp-style SOURCE language down to that assembly. This file was renamed from
+// VM/parser.{cpp,h} to kill the filename collision; the class is still `Parser`.
+
 namespace PiELo {
-    
+
     class Parser {
         public: 
 

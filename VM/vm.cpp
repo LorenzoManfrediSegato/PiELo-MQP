@@ -1,5 +1,5 @@
 #include "vm.h"
-#include "parser.h"
+#include "assemblyLoader.h"
 #include "networking.h"
 #include "robotFunctions.h"
 #include "gc.h"
