@@ -35,6 +35,10 @@ VM_TESTS=(
   "vm_logicTest=VM/testPrograms/logicTest.txt"
   "vm_stigsize=VM/testPrograms/stigsize.txt"
   "vm_updater=VM/testPrograms/updater.txt"
+  # Characterization tests: pin every arithmetic/comparison op's output before
+  # the Phase 4 binary-op dedup (most of these ops had no other golden coverage).
+  "vm_char_arith=VM/testPrograms/char_arith.txt"
+  "vm_char_compare=VM/testPrograms/char_compare.txt"
 )
 
 # Source programs compiled by the parser, then run on the VM: "name=path/to/source.txt"

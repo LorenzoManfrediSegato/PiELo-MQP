@@ -1,0 +1,134 @@
+# Characterization test: comparison ops (eql/neql/gt/gte/lt/lte).
+# Pins CURRENT behavior before the Phase 4 dedup. Comparisons compute a OP b
+# where a is the TOP of stack and b is second-from-top. The per-op NIL-pair
+# policies differ (gt both-nil -> 0 but gte both-nil -> 1, etc.) and are the
+# easiest thing for a careless merge to flatten -- so they are pinned here.
+# One-nil cases that THROW (gt/gte/lt/lte) abort the VM and are intentionally
+# not exercised inline; only the value-returning nil cases (eql/neql) are.
+
+# ---- eql (a == b) ----
+debug_print eql int 5 5 -> 1
+push i 5
+push i 5
+eql
+print
+pop
+debug_print eql int 5 6 -> 0
+push i 5
+push i 6
+eql
+print
+pop
+debug_print eql mixed int5 float5 -> 1
+push i 5
+push f 5
+eql
+print
+pop
+debug_print eql both-nil -> 1
+push_nil
+push_nil
+eql
+print
+pop
+debug_print eql one-nil -> 0
+push i 5
+push_nil
+eql
+print
+pop
+
+# ---- neql (a != b) ----
+debug_print neql int 5 6 -> 1
+push i 5
+push i 6
+neql
+print
+pop
+debug_print neql both-nil -> 0
+push_nil
+push_nil
+neql
+print
+pop
+debug_print neql one-nil -> 1
+push i 5
+push_nil
+neql
+print
+pop
+
+# ---- gt (a > b) ----
+debug_print gt a10 b3 -> 1
+push i 3
+push i 10
+gt
+print
+pop
+debug_print gt a3 b10 -> 0
+push i 10
+push i 3
+gt
+print
+pop
+debug_print gt both-nil -> 0
+push_nil
+push_nil
+gt
+print
+pop
+
+# ---- gte (a >= b) ----
+debug_print gte a10 b3 -> 1
+push i 3
+push i 10
+gte
+print
+pop
+debug_print gte equal 5 5 -> 1
+push i 5
+push i 5
+gte
+print
+pop
+debug_print gte both-nil -> 1
+push_nil
+push_nil
+gte
+print
+pop
+
+# ---- lt (a < b) ----
+debug_print lt a3 b10 -> 1
+push i 10
+push i 3
+lt
+print
+pop
+debug_print lt a10 b3 -> 0
+push i 3
+push i 10
+lt
+print
+pop
+debug_print lt both-nil -> 0
+push_nil
+push_nil
+lt
+print
+pop
+
+# ---- lte (a <= b) ----
+debug_print lte a3 b10 -> 1
+push i 10
+push i 3
+lte
+print
+pop
+debug_print lte both-nil -> 1
+push_nil
+push_nil
+lte
+print
+pop
+end

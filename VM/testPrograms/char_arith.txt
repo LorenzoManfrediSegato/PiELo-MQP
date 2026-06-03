@@ -1,0 +1,117 @@
+# Characterization test: arithmetic ops (add/sub/mul/div/mod).
+# Pins CURRENT behavior before the Phase 4 dedup. Stack convention: the
+# SECOND-from-top is b, the TOP is a; non-commutative ops compute b OP a.
+# Values are chosen so ordering and int/float promotion are visible.
+
+# ---- add (a + b, commutative) ----
+debug_print add int+int 4 7
+push i 4
+push i 7
+add
+print
+pop
+debug_print add float+float 1.5 2.5
+push f 1.5
+push f 2.5
+add
+print
+pop
+debug_print add mixed b=float2.5 a=int3
+push f 2.5
+push i 3
+add
+print
+pop
+debug_print add mixed b=int2 a=float3.5
+push i 2
+push f 3.5
+add
+print
+pop
+
+# ---- sub (b - a; ordering-sensitive) ----
+debug_print sub int b10 a3 -> 7
+push i 10
+push i 3
+sub
+print
+pop
+debug_print sub float b5.5 a2.0 -> 3.5
+push f 5.5
+push f 2.0
+sub
+print
+pop
+debug_print sub mixed b=float10 a=int3 -> 7
+push f 10
+push i 3
+sub
+print
+pop
+debug_print sub mixed b=int10 a=float3 -> 7
+push i 10
+push f 3
+sub
+print
+pop
+
+# ---- mul (a * b, commutative) ----
+debug_print mul int 4 5 -> 20
+push i 4
+push i 5
+mul
+print
+pop
+debug_print mul float 2.0 3.5 -> 7
+push f 2.0
+push f 3.5
+mul
+print
+pop
+debug_print mul mixed b=float2.5 a=int6 -> 15
+push f 2.5
+push i 6
+mul
+print
+pop
+
+# ---- div (b / a; ordering-sensitive) ----
+debug_print div int b20 a4 -> 5
+push i 20
+push i 4
+div
+print
+pop
+debug_print div float b9 a2 -> 4.5
+push f 9
+push f 2
+div
+print
+pop
+debug_print div mixed b=float10 a=int4 -> 2.5
+push f 10
+push i 4
+div
+print
+pop
+debug_print div mixed b=int10 a=float4 -> 2.5
+push i 10
+push f 4
+div
+print
+pop
+
+# ---- mod (b % a, int only) ----
+debug_print mod b17 a5 -> 2
+push i 17
+push i 5
+mod
+print
+pop
+debug_print mod b10 a3 -> 1
+push i 10
+push i 3
+mod
+print
+pop
+end

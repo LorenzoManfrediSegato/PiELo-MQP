@@ -1,0 +1,37 @@
+Offline mode: no router, robotID = 0
+ add int+int 4 7
+Stack top: 11
+ add float+float 1.5 2.5
+Stack top: 4
+ add mixed b=float2.5 a=int3
+Stack top: 5.5
+ add mixed b=int2 a=float3.5
+Stack top: 5.5
+ sub int b10 a3 -> 7
+Stack top: 7
+ sub float b5.5 a2.0 -> 3.5
+Stack top: 3.5
+ sub mixed b=float10 a=int3 -> 7
+Stack top: 7
+ sub mixed b=int10 a=float3 -> 7
+Stack top: 7
+ mul int 4 5 -> 20
+Stack top: 20
+ mul float 2.0 3.5 -> 7
+Stack top: 7
+ mul mixed b=float2.5 a=int6 -> 15
+Stack top: 15
+ div int b20 a4 -> 5
+Stack top: 5
+ div float b9 a2 -> 4.5
+Stack top: 4.5
+ div mixed b=float10 a=int4 -> 2.5
+Stack top: 2.5
+ div mixed b=int10 a=float4 -> 2.5
+Stack top: 2.5
+ mod b17 a5 -> 2
+Stack top: 2
+ mod b10 a3 -> 1
+Stack top: 1
+Ran end.
+Done!

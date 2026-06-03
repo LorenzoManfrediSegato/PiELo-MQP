@@ -1,0 +1,41 @@
+Offline mode: no router, robotID = 0
+ eql int 5 5 -> 1
+Stack top: 1
+ eql int 5 6 -> 0
+Stack top: 0
+ eql mixed int5 float5 -> 1
+Stack top: 1
+ eql both-nil -> 1
+Stack top: 1
+ eql one-nil -> 0
+Stack top: 0
+ neql int 5 6 -> 1
+Stack top: 1
+ neql both-nil -> 0
+Stack top: 0
+ neql one-nil -> 1
+Stack top: 1
+ gt a10 b3 -> 1
+Stack top: 1
+ gt a3 b10 -> 0
+Stack top: 0
+ gt both-nil -> 0
+Stack top: 0
+ gte a10 b3 -> 1
+Stack top: 1
+ gte equal 5 5 -> 1
+Stack top: 1
+ gte both-nil -> 1
+Stack top: 1
+ lt a3 b10 -> 1
+Stack top: 1
+ lt a10 b3 -> 0
+Stack top: 0
+ lt both-nil -> 0
+Stack top: 0
+ lte a3 b10 -> 1
+Stack top: 1
+ lte both-nil -> 1
+Stack top: 1
+Ran end.
+Done!
