@@ -89,7 +89,6 @@ void land() {
         else stack.push(0);
     } else {
         throw ShortOnElementsOnStackException("LAND");
-        state = ERROR;
     }
 }
 
@@ -104,7 +103,6 @@ void lor() {
         else stack.push(0);
     } else {
         throw ShortOnElementsOnStackException("LOR");
-        state = ERROR;
     }
 }
 
@@ -117,7 +115,6 @@ void lnot() {
         else stack.push(1);
     } else {
         throw ShortOnElementsOnStackException("LOR");
-        state = ERROR;
     }
 }
 
@@ -130,7 +127,6 @@ void jump(){
         programCounter = target_address - 1;
     } else {
         throw AddressNotDecleredException();
-        state = ERROR;
     }
 }
 
@@ -146,7 +142,6 @@ void jump_if_zero(){
             programCounter = target_address - 1;
         } else {
             throw AddressNotDecleredException();
-            state = ERROR;
         }
     }
 }
@@ -163,7 +158,6 @@ void jump_if_not_zero(){
             programCounter = target_address - 1;
         } else {
             throw AddressNotDecleredException();
-            state = ERROR;
         }
     }
 }

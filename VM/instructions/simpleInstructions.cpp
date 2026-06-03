@@ -30,7 +30,6 @@ using namespace PiELo;
             stack.push(a);
         } else{
             throw ShortOnElementsOnStackException("DUP");
-            state = ERROR;
         }
     }
 
@@ -42,7 +41,6 @@ using namespace PiELo;
             stack.push(b);
         } else {
             throw ShortOnElementsOnStackException("SWAP");
-            state = ERROR;
         }
     }
 
