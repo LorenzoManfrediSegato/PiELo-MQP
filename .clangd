@@ -1,0 +1,5 @@
+# The project builds with -std=c++17 (see VM/Makefile, Parser/Makefile). There is
+# no compile_commands.json, so clangd would otherwise guess an older standard and
+# wrongly flag C++17 constructs (e.g. std::variant in VM/vm.h) as errors.
+CompileFlags:
+  Add: [-std=c++17]

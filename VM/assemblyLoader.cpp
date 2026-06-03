@@ -80,12 +80,12 @@ void Parser::load(std::string filename){
         auto ins = bytecode[i];
         if (ins.type == ins.LOCATION) {
             // If the opcode is a location, swap it out for the bytecode location stored in labelledLocations
-            auto it = labelledLocations.find(*ins.asLocation);
+            auto it = labelledLocations.find(*ins.asLocation());
             if (it != labelledLocations.end()) {
                 bytecode[i] = (int) it->second;
-                debugPrintParser("Swapped location " << *ins.asLocation << " for bytecode position " << it->second << std::endl);
+                debugPrintParser("Swapped location " << *ins.asLocation() << " for bytecode position " << it->second << std::endl);
             } else {
-                throw std::runtime_error("Could not find labelled location " + *ins.asLocation);
+                throw std::runtime_error("Could not find labelled location " + *ins.asLocation());
             }
             
         }
@@ -108,7 +108,7 @@ void Parser::handlePush() {
     if (type == "i") {
         bytecode.push_back(PUSHI);
         bytecode.push_back(parseNextInt());
-        debugPrintParser("parsed: push int " << bytecode.at(bytecode.size() - 1).asInt << std::endl);
+        debugPrintParser("parsed: push int " << bytecode.at(bytecode.size() - 1).getIntFromMemory() << std::endl);
     }
     else if (type == "f") {
         bytecode.push_back(PUSHF);
@@ -174,10 +174,10 @@ void Parser::handleLoad() {
     // debugPrintParser(("1\n");
     // opCodeInstructionOrArgument name = parseNextString();
     // opCodeInstructionOrArgument name2 = name;
-    // debugPrintParser("name str: " << name.asString << " name2 str: " << name2.asString << std::endl;
+    // debugPrintParser("name str: " << name.asString() << " name2 str: " << name2.asString() << std::endl;
     bytecode.push_back(parseNextString());  // variable name
     debugPrintParser(" Pushed type " << bytecode[bytecode.size() - 1].type << std::endl);
-    debugPrintParser(" value " << *bytecode[bytecode.size()-1].asString << std::endl);
+    debugPrintParser(" value " << *bytecode[bytecode.size()-1].asString() << std::endl);
     // debugPrintParser(("2\n");
 }
 

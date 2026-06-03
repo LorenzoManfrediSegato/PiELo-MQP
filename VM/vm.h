@@ -6,6 +6,7 @@
 #include "exceptions.h"
 #include "instructionHandler.h"
 #include <algorithm>
+#include <variant>
 #include <uuid/uuid.h>
 
 namespace PiELo {
@@ -99,8 +100,24 @@ namespace PiELo {
 
     extern ClosureMap closureList;
 
-    struct opCodeInstructionOrArgument { // struct that helps handle the storing of values pushed by opcodes.
-        enum {
+    // A single bytecode cell: either an opcode or one of its inline arguments.
+    //
+    // Storage is a std::variant, so copy / move / destruction are all
+    // compiler-generated and correct by construction -- no hand-rolled
+    // copy-ctor / operator= / destructor juggling raw new/delete (that hand
+    // management is what produced the two Phase-2 memory-corruption bugs: the
+    // operator= switch fall-through and the non-POD malloc).
+    //
+    // `type` is kept as the authoritative discriminator because three logically
+    // distinct cell kinds -- STRING, NAME, and LOCATION -- all share the same
+    // std::string payload and can only be told apart by the tag. The assembler's
+    // label-resolution pass also relies on retagging a STRING cell to LOCATION
+    // in place (assemblyLoader.cpp), which is just a `type` change with the
+    // string payload untouched. The accessors below preserve the previous
+    // pointer-returning API (asString()/asLocation()/asClosure()) so call sites
+    // are unchanged apart from the trailing ().
+    struct opCodeInstructionOrArgument {
+        enum Type {
             INSTRUCTION,
             FLOAT,
             INT,
@@ -111,100 +128,29 @@ namespace PiELo {
             NAME,
             LOCATION
         } type;
-        union {
-            Instruction asInstruction;
-            float asFloat;
-            int asInt;
-            std::string* asString;
-            ClosureData* asClosure;
-            std::string* asLocation;
-        };
-    
-        opCodeInstructionOrArgument(int value_i) : type(INT) {asInt = value_i;}
 
-        opCodeInstructionOrArgument(float f) : type(FLOAT) {asFloat = f;}
+        // monostate covers NIL / C_CLOSURE (no payload). STRING/NAME/LOCATION all
+        // use the std::string alternative, disambiguated by `type`.
+        std::variant<std::monostate, Instruction, float, int, std::string, ClosureData> value;
 
-        opCodeInstructionOrArgument(Instruction instruction): type(INSTRUCTION) {asInstruction = instruction;}
+        opCodeInstructionOrArgument(int value_i) : type(INT), value(value_i) {}
 
-        opCodeInstructionOrArgument(codePtr codePointer, std::vector<std::string> dependencies, std::vector<std::string> args, std::vector<PiELo::Type> /*argTypes*/) {
-            // ClosureData is non-POD (holds vectors/strings/a symbol table), so it must
-            // be `new`ed, not malloc'd, or its members are never constructed (UB).
-            type = PIELO_CLOSURE;
-            asClosure = new ClosureData;
-            asClosure->codePointer = codePointer;
-            asClosure->argNames = args;
-            asClosure->dependencies = dependencies;
+        opCodeInstructionOrArgument(float f) : type(FLOAT), value(f) {}
+
+        opCodeInstructionOrArgument(Instruction instruction) : type(INSTRUCTION), value(instruction) {}
+
+        opCodeInstructionOrArgument(codePtr codePointer, std::vector<std::string> dependencies, std::vector<std::string> args, std::vector<PiELo::Type> /*argTypes*/)
+            : type(PIELO_CLOSURE), value(ClosureData{}) {
+            ClosureData& c = std::get<ClosureData>(value);
+            c.codePointer = codePointer;
+            c.argNames = args;
+            c.dependencies = dependencies;
         }
 
-        opCodeInstructionOrArgument(ClosureData closureData) {
-            type = PIELO_CLOSURE;
-            asClosure = new ClosureData;
-            *asClosure = closureData;
-        }
+        opCodeInstructionOrArgument(ClosureData closureData) : type(PIELO_CLOSURE), value(std::move(closureData)) {}
 
-        //opCodeInstructionOrArgument(const std::string& value_s) : type(STRING) {value.asString = new std::string(value);}
-        
-        opCodeInstructionOrArgument(const std::string s) : type(STRING) {
-            asString = new std::string(s);
-        }
+        opCodeInstructionOrArgument(const std::string s) : type(STRING), value(s) {}
 
-        ~opCodeInstructionOrArgument() {
-            if (type == STRING) {
-                // std::cout << "freeing string ptr: " << asString << std::endl;
-                // std::cout << "had value " << *asString << std::endl;
-                delete asString;
-            } else if (type == PIELO_CLOSURE) {
-                // printf("Freeing closure \n");
-                delete asClosure;
-            } else if (type == LOCATION) {
-                delete asLocation;
-            }
-        }
-
-        opCodeInstructionOrArgument(const opCodeInstructionOrArgument& other) {
-            // printf("Copying!\n");
-            if (this != &other) {
-                type = other.type;
-                switch (other.type) {
-                    case INSTRUCTION: asInstruction = other.asInstruction; break;
-                    case FLOAT: asFloat = other.asFloat; break;
-                    case INT: asInt = other.asInt; break;
-                    case STRING: asString = new std::string(*other.asString); break;
-                    case NIL: break;
-                    case PIELO_CLOSURE:
-                        asClosure = new ClosureData();
-                        *asClosure = *other.asClosure;
-                        break;
-                    case C_CLOSURE: break; // no C-closure payload in this union
-                    case NAME: asString = new std::string(*other.asString); break;
-                    case LOCATION: asLocation = new std::string(*other.asLocation); break;
-                }
-            }
-        }
-
-        opCodeInstructionOrArgument& operator= (const opCodeInstructionOrArgument& other) {
-            // printf("operator=\n");
-            if (this != &other) {
-                type = other.type;
-                switch (other.type) {
-                    case INSTRUCTION: asInstruction = other.asInstruction; break;
-                    case FLOAT: asFloat = other.asFloat; break;
-                    case INT: asInt = other.asInt; break;
-                    case STRING: asString = new std::string(*other.asString); break;
-                    case NIL: break;
-                    case PIELO_CLOSURE:
-                        asClosure = new ClosureData;
-                        *asClosure = *other.asClosure;
-                        break; // without this, fell through into NAME and read the
-                               // closure pointer as a std::string* -> memory corruption
-                    case C_CLOSURE: break; // no C-closure payload in this union
-                    case NAME: asString = new std::string(*other.asString); break;
-                    case LOCATION: asLocation = new std::string(*other.asLocation); break;
-                }
-            }
-            return *this;
-        }
-        
         std::string getTypeAsString() const {
             switch (type) {
                 case NIL: return "NIL";
@@ -219,25 +165,32 @@ namespace PiELo {
                 default: return "invalid type";
             }
         }
-        
+
+        // Accessors preserving the previous field-like API. The string-bearing
+        // kinds (STRING/NAME/LOCATION) all read out of the single string
+        // alternative; `asString()` / `asLocation()` are the same storage under
+        // different tags, matching the old union aliasing.
+        Instruction asInstruction() const { return std::get<Instruction>(value); }
+        std::string* asString() { return &std::get<std::string>(value); }
+        const std::string* asString() const { return &std::get<std::string>(value); }
+        std::string* asLocation() { return &std::get<std::string>(value); }
+        const std::string* asLocation() const { return &std::get<std::string>(value); }
+        ClosureData* asClosure() { return &std::get<ClosureData>(value); }
+        const ClosureData* asClosure() const { return &std::get<ClosureData>(value); }
+
         float getFloatFromMemory() const {
             if (type != FLOAT) throw InvalidTypeAccessException("FLOAT", getTypeAsString());
-            return asFloat;
+            return std::get<float>(value);
         }
 
         int getIntFromMemory() const{
             if (type != INT) throw InvalidTypeAccessException("INT", getTypeAsString());
-            return asInt;
+            return std::get<int>(value);
         }
 
-        // ClosureData* getClosureDataFromMemory() {
-        //     if (type != PIELO_CLOSURE) throw InvalidTypeAccessException("PIELO_CLOSURE", getTypeAsString());
-        //     return asClosure;
-        // }
-        
-        std::string* getNameValueFromMemory() const{
+        std::string* getNameValueFromMemory() {
             if (type != NAME) throw InvalidTypeAccessException("NAME", getTypeAsString());
-            return asString;
+            return &std::get<std::string>(value);
         }
     };
 

@@ -14,10 +14,10 @@ namespace PiELo{
     void handleInstruction(opCodeInstructionOrArgument op) {
         if (op.type != op.INSTRUCTION) {
             debugPrint("Attempted to run a type " << op.getTypeAsString() << " from pc " << programCounter << std::endl);
-            debugPrint(*op.asString << std::endl);
+            debugPrint(*op.asString() << std::endl);
             throw std::runtime_error("Attempted to run non-instruction as instruction");
         }
-        Instruction instruction = op.asInstruction;
+        Instruction instruction = op.asInstruction();
         if (instruction != SPIN) {
             debugPrint("Running instruction " << instruction << std::endl);
         }
@@ -28,9 +28,9 @@ namespace PiELo{
             case DEFINE_CLOSURE:
                 // Get closure name, closure data from bytecode
                 debugPrint("running define_closure");
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 debugPrint(" Got name " << name);
-                closure = *bytecode[++programCounter].asClosure;
+                closure = *bytecode[++programCounter].asClosure();
                 debugPrint(" got closure " << std::endl);
                 defineClosure(name, closure);
                 break;
@@ -44,57 +44,57 @@ namespace PiELo{
                 break;
 
             case RERUN_CLOSURE:
-                rerunClosure(bytecode[++programCounter].asInt);
+                rerunClosure(bytecode[++programCounter].getIntFromMemory());
                 break;
             
             case CALL_C_CLOSURE:
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 debugPrint("Calling c closure: " << name);
                 stack.push(taggedTable[name].getFunctionPointer()());
                 break;
             
             case STORE_LOCAL:
-                storeLocal(*bytecode[++programCounter].asString);
+                storeLocal(*bytecode[++programCounter].asString());
                 break;
             case STORE_GLOBAL:
-                storeGlobal(*bytecode[++programCounter].asString);
+                storeGlobal(*bytecode[++programCounter].asString());
                 break;
             case STORE_TAGGED:
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 debugPrint("instructionHandler: store name: " << name << std::endl);
                 storeTagged(name);
                 break;
             case STORE_STIG:
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 debugPrint("instructionHandler: store stig name: " << name << std::endl);
                 storeStig(name);
                 break;
             case PUSH_NEXT_IN_STIG:
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 debugPrint("instructionHandler: pushing next element of name: " << name << std::endl);
                 pushNextElementOfStig(name);
                 break;
             case IS_ITER_AT_END:
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 debugPrint("instructionHandler: is iter at end of name: " << name << std::endl);
                 isIterAtEnd(name);
                 break;
             case RESET_ITER:
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 debugPrint("instructionHandler: resetting iter for name: " << name << std::endl);
                 resetIter(name);
                 break;
             case STIG_SIZE:
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 stigSize(name);
                 break;
             case TAG_VARIABLE:
-                name = *bytecode[++programCounter].asString;
-                tagVariable(name, *bytecode[++programCounter].asString);
+                name = *bytecode[++programCounter].asString();
+                tagVariable(name, *bytecode[++programCounter].asString());
                 break;
 
             case TAG_ROBOT:
-                tagRobot(*bytecode[programCounter++].asString);
+                tagRobot(*bytecode[programCounter++].asString());
                 break;
 
             case LOAD_TO_STACK:
@@ -107,7 +107,7 @@ namespace PiELo{
                 // }
                 // std::cout << "Bytecode size: " << bytecode.size() << " pc: " << programCounter << std::endl;
                 // std::cout << "type: " << bytecode[programCounter].type << std::endl;
-                name = *bytecode[++programCounter].asString;
+                name = *bytecode[++programCounter].asString();
                 // printf("Got name\n");
                 loadToStack(name);
                 break;
@@ -128,7 +128,7 @@ namespace PiELo{
                 break;
 
             case DEBUG_PRINT:
-                std::cout << *bytecode[++programCounter].asString << std::endl;
+                std::cout << *bytecode[++programCounter].asString() << std::endl;
                 break;
 
             case NOP:

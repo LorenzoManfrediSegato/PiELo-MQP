@@ -11,7 +11,7 @@ using namespace PiELo;
 
     void pushInt(){
         programCounter++;
-        // std::cout << "type " << bytecode[programCounter].asInstruction << std::endl;
+        // std::cout << "type " << bytecode[programCounter].asInstruction() << std::endl;
         Variable i_val = bytecode[programCounter].getIntFromMemory();
 
         stack.push(i_val);
