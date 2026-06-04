@@ -1,7 +1,7 @@
 Offline mode: no router, robotID = 0
 GC: Starting Collection. closureList size = 5
 GC  Collection complete. closureList size = 5
-int 10Stack top: 11
+Stack top: 11
 GC: Starting Collection. closureList size = 6
 GC  Collection complete. closureList size = 6
 GC: Starting Collection. closureList size = 7

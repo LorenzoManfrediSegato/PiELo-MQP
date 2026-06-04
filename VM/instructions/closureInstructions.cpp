@@ -56,9 +56,11 @@ namespace PiELo{
             // Copy the arguments to the local symbol table
             std::string argName = closureList[closureIndex].argNames[i];
             closureList[closureIndex].localSymbolTable[argName] = stack.top();
+            #ifdef __DEBUG_INSTRUCTIONS__
             debugPrint(" added arg name " << argName << " value ");
             closureList[closureIndex].localSymbolTable[argName].print();
             debugPrint("..." << std::endl);
+            #endif
             stack.pop();
         }
 

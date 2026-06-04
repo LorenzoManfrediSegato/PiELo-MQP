@@ -1,6 +1,6 @@
 Offline mode: no router, robotID = 0
  calling add_helper
-int 4int 3 adding! result:
+ adding! result:
 Stack top: 7
 GC: Starting Collection. closureList size = 4
 GC  Collection complete. closureList size = 4
