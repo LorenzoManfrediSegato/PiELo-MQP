@@ -35,10 +35,18 @@ int main(int argc, char** argv) {
         printf("Please provide a filename\n");
         exit(-1);
     }
-    // Get a random seed based on the microsecond-precision time this program is running
-    struct timeval time;
-    gettimeofday(&time, NULL);
-    srand(time.tv_sec * time.tv_usec);
+    // Seed the RNG. If PIELO_SEED is set, use it for a deterministic, reproducible
+    // run (the RL verifier / sandbox sets this so random_sleep and any other rand()
+    // use are repeatable). Otherwise fall back to the microsecond-precision wall clock,
+    // exactly as before -- so an unset PIELO_SEED leaves existing behavior unchanged.
+    const char* seedEnv = std::getenv("PIELO_SEED");
+    if (seedEnv != nullptr) {
+        srand(static_cast<unsigned>(std::strtoul(seedEnv, nullptr, 10)));
+    } else {
+        struct timeval time;
+        gettimeofday(&time, NULL);
+        srand(time.tv_sec * time.tv_usec);
+    }
 
     PiELo::registerFunction("do_nothing", &doNothingButTalkAboutIt);
     PiELo::registerFunction("go_forward", &goForward);
